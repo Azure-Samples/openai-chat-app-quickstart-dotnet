@@ -1,9 +1,27 @@
-# Chat Application using Azure OpenAI (.NET)
+---
+name: Simple Chat Application using Azure OpenAI (Python)
+description: A sample chat app that uses Python to stream chat completions from the OpenAI SDK. Deployable to Azure Container Apps with managed identity.
+languages:
+- azdeveloper
+- python
+- bicep
+- html
+products:
+- azure
+- azure-container-apps
+- azure-openai
+- azure-container-registry
+page_type: sample
+urlFragment: openai-chat-app-quickstart
+---
+<!-- YAML front-matter schema: https://review.learn.microsoft.com/en-us/help/contribute/samples/process/onboarding?branch=main#supported-metadata-fields-for-readmemd -->
+
+# Chat Application using Azure OpenAI (Python)
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/Azure-Samples/openai-chat-app-quickstart)
 [![Open in Dev Containers](https://img.shields.io/static/v1?style=for-the-badge&label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/azure-samples/openai-chat-app-quickstart)
 
-This repository includes a .NET app that uses Azure OpenAI to generate responses to user messages.
+This repository includes a Python app that uses Azure OpenAI to generate responses to user messages.
 
 The project includes all the infrastructure and configuration needed to provision Azure OpenAI resources and deploy the app to [Azure Container Apps](https://learn.microsoft.com/azure/container-apps/overview) using the [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/overview). By default, the app will use managed identity to authenticate with Azure OpenAI.
 
@@ -12,38 +30,27 @@ since the local app needs credentials for Azure OpenAI to work properly.
 
 * [Features](#features)
 * [Architecture diagram](#architecture-diagram)
-* [Getting started](#getting-started)
-  * [GitHub Codespaces](#github-codespaces)
-  * [VS Code Dev Containers](#vs-code-dev-containers)
-  * [Local Environment](#local-environment)
+* [Opening the project](#opening-the-project)
 * [Deploying](#deploying)
 * [Development server](#development-server)
-* [Guidance](#guidance)
-  * [Costs](#costs)
-  * [Security Guidelines](#security-guidelines)
+* [Costs](#costs)
+* [Security Guidelines](#security-guidelines)
 * [Resources](#resources)
-
-## Important Security Notice
-
-This template, the application code and configuration it contains, has been built to showcase Microsoft Azure specific services and tools. We strongly advise our customers not to make this code part of their production environments without implementing or enabling additional security features.
-
-For a more comprehensive list of best practices and security recommendations for Intelligent Applications, [visit our official documentation](https://github.com/Azure-Samples/azd-template-artifacts#link).
 
 ## Features
 
-This project framework provides the following features:
+* A Python [Quart](https://quart.palletsprojects.com/en/latest/) that uses the [openai](https://pypi.org/project/openai/) package to generate responses to user messages.
+* A basic HTML/JS frontend that streams responses from the backend using [JSON Lines](http://jsonlines.org/) over a [ReadableStream](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream).
+* [Bicep files](https://docs.microsoft.com/azure/azure-resource-manager/bicep/) for provisioning Azure resources, including Azure OpenAI, Azure Container Apps, Azure Container Registry, Azure Log Analytics, and RBAC roles.
+* Support for using [local LLMs](/docs/local_ollama.md) during development.
 
-* A .NET Blazor app that uses the [Azure.AI.OpenAI](https://www.nuget.org/packages/Azure.AI.OpenAI/) package to generate responses to user messages.
-* [Bicep files](https://docs.microsoft.com/azure/azure-resource-manager/bicep/) for provisioning Azure resources, including Azure OpenAI, Azure Container Apps, Azure Container Registry, and RBAC roles.
-* Support for running the app locally during development while connected to the provisioned Azure resources.
-
-![Screenshot of the chat app](docs/screenshot_chatapp.png)
+![Screenshot of the chat app](/docs/screenshot_chatapp.png)
 
 ## Architecture diagram
 
-![Architecture diagram: Azure Container Apps inside Container Apps Environment, connected to Container Registry with Container, connected to Managed Identity for Azure OpenAI](readme_diagram.png)
+![Architecture diagram: Azure Container Apps inside Container Apps Environment, connected to Container Registry with Container, connected to Managed Identity for Azure OpenAI](/readme_diagram.png)
 
-## Getting started
+## Opening the project
 
 You have a few options for getting started with this template.
 The quickest way to get started is GitHub Codespaces, since it will setup all the tools for you, but you can also [set it up locally](#local-environment).
@@ -78,15 +85,31 @@ If you're not using one of the above options for opening the project, then you'l
 1. Make sure the following tools are installed:
 
     * [Azure Developer CLI (azd)](https://aka.ms/install-azd)
-    * [.NET 8.0](https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
+    * [Python 3.10+](https://www.python.org/downloads/)
     * [Docker Desktop](https://www.docker.com/products/docker-desktop/)
     * [Git](https://git-scm.com/downloads)
 
 2. Download the project code:
 
     ```shell
-    azd init -t openai-chat-app-quickstart-dotnet
+    azd init -t openai-chat-app-entra-auth-local
     ```
+
+3. Open the project folder
+4. Create a [Python virtual environment](https://docs.python.org/3/tutorial/venv.html#creating-virtual-environments) and activate it.
+5. Install required Python packages:
+
+    ```shell
+    pip install -r requirements-dev.txt
+    ```
+
+6. Install the app as an editable package:
+
+    ```shell
+    python3 -m pip install -e src
+    ```
+
+7. Continue with the [deploying steps](#deploying).
 
 ## Deploying
 
@@ -118,7 +141,7 @@ Once you've opened the project in [Codespaces](#github-codespaces), in [Dev Cont
     It will prompt you to provide an `azd` environment name (like "chat-app"), select a subscription from your Azure account, and select a [location where OpenAI is available](https://azure.microsoft.com/explore/global-infrastructure/products-by-region/?products=cognitive-services&regions=all) (like "francecentral"). Then it will provision the resources in your account and deploy the latest code. If you get an error or timeout with deployment, changing the location can help, as there may be availability constraints for the OpenAI resource.
 
 3. When `azd` has finished deploying, you'll see an endpoint URI in the command output. Visit that URI, and you should see the chat app! 🎉
-4. After you've made any changes to the app code, you can just run:
+4. When you've made any changes to the app code, you can just run:
 
     ```shell
     azd deploy
@@ -134,21 +157,19 @@ to be stored as Github action secrets. To set that up, run:
 azd pipeline config
 ```
 
-## Local development
+## Development server
 
-In order to run this app locally, you'll first need to have deployed the template using the steps outlined in the previous sections. The `azd` template adds the required output variables to your dotnet user secrets so you can develop locally.
-
-Use the `dotnet run` command to start the app locally:
+Assuming you've run the steps in [Opening the project](#opening-the-project) and the steps in [Deploying](#deploying), you can now run the Quart app in your development environment:
 
 ```shell
-dotnet run
+python -m quart --app src.quartapp run --port 50505 --reload
 ```
 
-You can access the local app through the url printed out in the console.
+This will start the app on port 50505, and you can access it at `http://localhost:50505`.
 
-## Guidance
+To save costs during development, you may point the app at a [local LLM server](/docs/local_ollama.md).
 
-### Costs
+## Costs
 
 Pricing varies per region and usage, so it isn't possible to predict exact costs for your usage.
 The majority of the Azure resources used in this infrastructure are on usage-based pricing tiers.
@@ -164,7 +185,7 @@ You can try the [Azure pricing calculator](https://azure.com/e/2176802ea14941e49
 ⚠️ To avoid unnecessary costs, remember to take down your app if it's no longer in use,
 either by deleting the resource group in the Portal or running `azd down`.
 
-### Security Guidelines
+## Security Guidelines
 
 This template uses [Managed Identity](https://learn.microsoft.com/entra/identity/managed-identities-azure-resources/overview) for authenticating to the Azure OpenAI service.
 
@@ -172,9 +193,12 @@ Additionally, we have added a [GitHub Action](https://github.com/microsoft/secur
 
 You may want to consider additional security measures, such as:
 
-* Protecting the Azure Container Apps instance with a [firewall](https://learn.microsoft.com/azure/container-apps/waf-app-gateway) and/or [Virtual Network](https://learn.microsoft.com/azure/container-apps/networking?tabs=workload-profiles-env%2Cazure-cli).
+* Protecting the Azure Container Apps instance with a [firewall](https://learn.microsoft.com/azure/container-apps/waf-app-gateway).
+* Using a [Virtual Network](https://learn.microsoft.com/azure/container-apps/networking?tabs=workload-profiles-env%2Cazure-cli) to restrict access to the Azure OpenAI service and Azure Container Apps.
 
 ## Resources
 
-* [Chat with your own data sample for .NET](https://learn.microsoft.com/en-us/dotnet/ai/get-started-app-chat-template?tabs=github-codespaces) - This sample implements a chat app using C#, Azure OpenAI Service, and Retrieval Augmented Generation (RAG) in Azure AI Search to get answers about employee benefits at a fictitious company.
-* [OpenAI Chat Application with Microsoft Entra Authentication - Built-in Auth](https://learn.microsoft.com/en-us/dotnet/ai/tutorials/tutorial-ai-vector-search) - This tutorial explores integration of the RAG pattern using Open AI models and vector search capabilities in a .NET app.
+* [OpenAI Chat Application with Microsoft Entra Authentication - MSAL SDK](https://github.com/Azure-Samples/openai-chat-app-entra-auth-local): Similar to this project, but adds user authentication with Microsoft Entra using the Microsoft Graph SDK and built-in authentication feature of Azure Container Apps.
+* [OpenAI Chat Application with Microsoft Entra Authentication - Built-in Auth](https://github.com/Azure-Samples/openai-chat-app-entra-auth-local): Similar to this project, but adds user authentication with Microsoft Entra using the Microsoft Graph SDK and MSAL SDK.
+* [RAG chat with Azure AI Search + Python](https://github.com/Azure-Samples/azure-search-openai-demo/): A more advanced chat app that uses Azure AI Search to ground responses in domain knowledge. Includes user authentication with Microsoft Entra as well as data access controls.
+* [Develop Python apps that use Azure AI services](https://learn.microsoft.com/azure/developer/python/azure-ai-for-python-developers)

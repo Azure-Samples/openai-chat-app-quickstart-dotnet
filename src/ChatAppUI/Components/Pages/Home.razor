@@ -1,0 +1,144 @@
+﻿@page "/"
+@using Azure.AI.OpenAI
+@using Azure.Identity
+@using Markdig
+@using OpenAI.Chat
+@using System.ComponentModel.DataAnnotations
+@using System.ClientModel
+@inject IConfiguration config
+@inject AzureOpenAIClient azureClient
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+<PageTitle>Home</PageTitle>
+
+@foreach (ChatMessage item in messages)
+{
+    switch (item)
+    {
+        case UserChatMessage userMessage:
+
+        <FluentGrid Spacing="@Spacing" AdaptiveRendering="true" Justify="@Justification" Style="margin: 4px; ">
+            <FluentGridItem xs="6">
+                <FluentCard xs="5" MinimalStyle="true">
+                        <div class="user-header">You</div>
+                        <p class="chat-text">@(new MarkupString(Markdown.ToHtml(userMessage.Content[0].Text)))</p>
+                </FluentCard>
+            </FluentGridItem>
+        </FluentGrid>
+        break;
+
+        case SystemChatMessage chatMessage:
+
+        <FluentGrid Spacing="@Spacing"  Justify="JustifyContent.FlexStart" Style="margin: 4px; ">
+            <FluentGridItem xs="6">
+                    <FluentCard xs="5" MinimalStyle="true">
+                        <div class="bot-header">AI</div>
+                        <p class="chat-text">@(new MarkupString(Markdown.ToHtml(chatMessage.Content[0].Text)))</p>
+                </FluentCard>
+            </FluentGridItem>
+        </FluentGrid>
+        break;
+    }
+}
+
+@if (!String.IsNullOrEmpty(errorMessage))
+{
+    <FluentMessageBar Title="Error" Intent="@MessageIntent.Error">
+        @errorMessage
+    </FluentMessageBar>
+}
+@if (isLoading)
+{
+    <FluentProgressRing></FluentProgressRing>
+}
+
+<br />
+<EditForm Model="@model" OnValidSubmit="OnValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <InputText placeholder="Enter a prompt" class="chat-input" Name="message" @ref="chatInput" @bind-Value="model.UserMessage" Label="Enter your message" />
+    <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent">Submit</FluentButton>
+</EditForm>
+
+@code
+{
+    JustifyContent Justification = JustifyContent.FlexEnd;
+    int Spacing = 3;
+}
+
+
+@code {
+    AIChatForm model = new AIChatForm();
+
+    public List<ChatMessage> messages = new();
+    public string errorMessage = "";
+    private InputText chatInput;
+
+    public bool isLoading = false;
+
+    private async Task OnValidSubmit(EditContext context)
+    {
+        isLoading = true;
+        ChatClient chatClient = azureClient.GetChatClient("gpt-4o-mini");
+
+        messages.Add(new UserChatMessage(model.UserMessage));
+        model = new AIChatForm();
+
+        try
+        {
+            ChatCompletion completion = await chatClient.CompleteChatAsync(messages);
+            messages.Add(new SystemChatMessage(completion.Content[0].Text));
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+
+        isLoading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await chatInput.Element!.Value.FocusAsync();
+    }
+
+    bool success;
+
+    public class AIChatForm
+    {
+        [Required]
+        public string UserMessage { get; set; }
+    }
+}
+
+<style>
+    .user-header {
+        background-color: #2C830F;
+        color: white;
+        padding: 10px;
+    }
+
+    .bot-header {
+        background-color: #2372CC;
+        color: white;
+        padding: 10px;
+    }
+    .chat-text {
+        padding: 10px;
+    }
+    .chat-input {
+        width: 100%;
+        margin: 10px 0;
+        border-radius: 5px;
+        border-color: #ccc;
+        padding: 10px;
+    }
+    chat-input:focus {
+        border-color: #ccc;
+    }
+
+    .fluent-card-minimal-style {
+        padding: 0px !important;
+    }
+</style>
